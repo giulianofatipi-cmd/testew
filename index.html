@@ -1,306 +1,1159 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<base target="_top">
 <meta charset="UTF-8">
-<title>Leitor de QR Code</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>Leitor de QR Code - FATIPI</title>
+
 <style>
-  :root {
-    --bg: #0f1115;
-    --card: #1a1d24;
-    --text: #f2f4f8;
-    --muted: #9aa3b2;
-    --accent: #4f8cff;
-    --ok: #2ecc71;
+:root {
+  --bg: #0f1115;
+  --card: #1a1d24;
+  --text: #f2f4f8;
+  --muted: #9aa3b2;
+  --accent: #4f8cff;
+  --ok: #2ecc71;
+  --warning: #f5a623;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 4px 0;
+}
+
+p.sub {
+  color: var(--muted);
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+.scanner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.frame {
+  position: absolute;
+  inset: 12%;
+  border: 3px solid rgba(255,255,255,.88);
+  border-radius: 16px;
+  box-shadow: 0 0 0 999px rgba(0,0,0,.35);
+  pointer-events: none;
+}
+
+.frame::after {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 8%;
+  height: 2px;
+  background: var(--accent);
+  animation: scan 2s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0%, 100% { top: 8%; }
+  50% { top: 92%; }
+}
+
+.status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
+  font-size: 13px;
+  background: linear-gradient(transparent, rgba(0,0,0,.85));
+  text-align: center;
+  z-index: 2;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  background: rgba(15,17,21,.95);
+  z-index: 5;
+}
+
+.overlay.show {
+  display: flex;
+}
+
+.overlay p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+button {
+  font: inherit;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid #3a4250;
+}
+
+button.small {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  flex: 1;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 22px 0 10px;
+}
+
+.item {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.item span {
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.item > div {
+  min-width: 0;
+}
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.68);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.modal-bg.show {
+  display: flex;
+  animation: fade .2s;
+}
+
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card);
+  border-radius: 22px;
+  padding: 22px;
+  animation: up .25s ease-out;
+}
+
+.modal .tag {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ok);
+  margin-bottom: 6px;
+}
+
+.modal .tag.warn {
+  color: var(--warning);
+}
+
+.modal h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.modal p {
+  margin: 0 0 18px;
+  color: #cfd5e0;
+  line-height: 1.5;
+  font-size: 15px;
+  word-break: break-word;
+}
+
+.modal .row {
+  display: flex;
+  gap: 10px;
+}
+
+.modal .row button {
+  flex: 1;
+}
+
+.qrbox {
+  background: #fff;
+  padding: 14px;
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.qrbox img, .qrbox canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes up {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 20px; margin: 4px 0 4px; }
-  p.sub { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
-
-  /* Câmera */
-  .scanner { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #000;
-    border-radius: 18px; overflow: hidden; }
-  video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .frame { position: absolute; inset: 15%; border: 3px solid rgba(255,255,255,.85);
-    border-radius: 16px; box-shadow: 0 0 0 999px rgba(0,0,0,.35); pointer-events: none; }
-  .frame::after { content: ""; position: absolute; left: 6%; right: 6%; top: 0; height: 2px;
-    background: var(--accent); animation: scan 2s ease-in-out infinite; }
-  @keyframes scan { 0%,100% { top: 8%; } 50% { top: 92%; } }
-  .status { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px; font-size: 13px;
-    background: linear-gradient(transparent, rgba(0,0,0,.75)); text-align: center; }
-  .overlay { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px;
-    align-items: center; justify-content: center; text-align: center; padding: 24px;
-    background: rgba(15,17,21,.92); }
-  .overlay.show { display: flex; }
-  .overlay p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
-
-  button { font: inherit; border: 0; border-radius: 12px; padding: 12px 18px; cursor: pointer;
-    background: var(--accent); color: #fff; font-weight: 600; }
-  button.ghost { background: transparent; color: var(--text); border: 1px solid #333a47; }
-  button.small { padding: 8px 12px; font-size: 13px; }
-
-  /* Lista de itens */
-  h2 { font-size: 16px; margin: 22px 0 10px; }
-  .item { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px;
-    display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-  .item b { display: block; font-size: 15px; }
-  .item span { color: var(--muted); font-size: 12px; word-break: break-all; }
-
-  /* Pop-up */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none;
-    align-items: flex-end; justify-content: center; z-index: 50; padding: 12px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-  .modal-bg.show { display: flex; animation: fade .2s; }
-  .modal { width: 100%; max-width: 480px; background: var(--card); border-radius: 22px;
-    padding: 22px; animation: up .25s ease-out; }
-  .modal .tag { display: inline-block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--ok); margin-bottom: 6px; }
-  .modal .tag.warn { color: #f5a623; }
-  .modal h3 { margin: 0 0 8px; font-size: 20px; }
-  .modal p { margin: 0 0 18px; color: #cfd5e0; line-height: 1.5; font-size: 15px; word-break: break-word; }
-  .modal .row { display: flex; gap: 10px; }
-  .modal .row button { flex: 1; }
-  .qrbox { background: #fff; padding: 14px; border-radius: 14px; display: flex; justify-content: center;
-    margin-bottom: 16px; }
-  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes up { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
 </style>
 </head>
+
 <body>
-<div class="wrap">
+
+<main class="wrap">
+
   <h1>Leitor de QR Code</h1>
-  <p class="sub">Aponte a câmera para um QR code cadastrado.</p>
+  <p class="sub">Aponte a câmera para o QR Code da FATIPI.</p>
 
   <div class="scanner">
+
     <video id="video" playsinline muted autoplay></video>
+
     <div class="frame"></div>
-    <div class="status" id="status">Iniciando câmera…</div>
+
+    <div class="status" id="status">
+      Preparando leitor...
+    </div>
 
     <div class="overlay" id="overlay">
+
       <strong id="overlayTitle">Câmera desativada</strong>
-      <p id="overlayMsg">Toque no botão para ativar a câmera.</p>
-      <button id="btnStart">Ativar câmera</button>
-    </div>
-  </div>
-  <canvas id="canvas" style="display:none"></canvas>
 
-  <h2>Itens cadastrados</h2>
+      <p id="overlayMsg">
+        Toque no botão para ativar a câmera.
+      </p>
+
+      <button id="btnStart" type="button">
+        Ativar câmera
+      </button>
+
+    </div>
+
+  </div>
+
+  <div class="actions">
+
+    <button class="ghost" id="btnSwitch" type="button">
+      Trocar câmera
+    </button>
+
+    <button class="ghost" id="btnStop" type="button">
+      Parar câmera
+    </button>
+
+  </div>
+
+  <canvas id="canvas" hidden></canvas>
+
+  <h2>QR Code cadastrado</h2>
+
   <div id="list"></div>
+
+</main>
+
+<!-- JANELA DE RESULTADO -->
+
+<div class="modal-bg" id="modalBg">
+
+  <div class="modal" role="dialog"
+       aria-modal="true" aria-labelledby="mTitle">
+
+    <div class="tag" id="mTag">
+      QR Code lido
+    </div>
+
+    <h3 id="mTitle"></h3>
+
+    <div id="mQr" class="qrbox" style="display:none"></div>
+
+    <p id="mDesc"></p>
+
+    <div class="row">
+
+      <button class="ghost" id="mClose" type="button">
+        Fechar
+      </button>
+
+      <button id="mOpen" type="button">
+        Abrir site da FATIPI
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
 
-<!-- Pop-up -->
-<div class="modal-bg" id="modalBg">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="tag" id="mTag">QR code lido</div>
-    <h3 id="mTitle"></h3>
-    <div id="mQr" class="qrbox" style="display:none"></div>
-    <p id="mDesc"></p>
-    <div class="row">
-      <button class="ghost" id="mClose">Fechar</button>
-      <button id="mOpen">Abrir link</button>
-    </div>
-  </div>
-</div>
+<!-- BIBLIOTECAS -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
-/* ============================================================
-   1) LISTA DE ITENS — edite à vontade.
-      "url" é o que está dentro do QR code. Se o QR contiver
-      exatamente esse link (ou o "id"), o pop-up abre com a descrição.
-   ============================================================ */
+"use strict";
+
+/* =========================================
+   1. CADASTRO DO SITE
+========================================= */
+
 const ITEMS = [
-  { id: "item-001", titulo: "Cafeteira Aurora",
-    descricao: "Cafeteira elétrica com reservatório de 1,2 L, filtro permanente e desligamento automático após 30 minutos.",
-    url: "https://www.fatipi.edu.br/" },
-  { id: "item-002", titulo: "Mochila Trilha 30L",
-    descricao: "Mochila resistente à água com compartimento acolchoado para notebook e alças ergonômicas.",
-    url: "https://exemplo.com/produtos/mochila-trilha-30l" },
-  { id: "item-003", titulo: "Luminária Lunar",
-    descricao: "Luminária de mesa em LED com três temperaturas de cor e carregamento sem fio no pé.",
-    url: "https://exemplo.com/produtos/luminaria-lunar" },
-  { id: "item-004", titulo: "Garrafa Térmica Polar",
-    descricao: "Garrafa de aço inox de 750 ml que mantém bebidas geladas por 24 h ou quentes por 12 h.",
-    url: "https://exemplo.com/produtos/garrafa-polar" },
-  { id: "item-005", titulo: "Caderno Pontilhado Zen",
-    descricao: "Caderno de 160 páginas com papel off-white 90 g, capa dura e marcador de página em fita.",
-    url: "https://exemplo.com/produtos/caderno-zen" },
-  { id: "item-006", titulo: "Fone Brisa BT",
-    descricao: "Fone Bluetooth com cancelamento de ruído, 30 h de bateria e estojo de carregamento compacto.",
-    url: "https://exemplo.com/produtos/fone-brisa-bt" }
+
+  {
+    id: "fatipi",
+    titulo: "FATIPI",
+
+    descricao:
+      "Bem-vindo ao site oficial da Faculdade de Teologia da Igreja Presbiteriana Independente do Brasil.",
+
+    url: "https://www.fatipi.edu.br/"
+
+  }
+
 ];
 
-/* ============================================================
-   2) Elementos e estado
-   ============================================================ */
-const $ = (id) => document.getElementById(id);
-const video = $("video"), canvas = $("canvas"), ctx = canvas.getContext("2d", { willReadFrequently: true });
-let stream = null, scanning = false, modalOpen = false, lastCode = "", lastTime = 0, currentLink = null;
 
-const norm = (s) => String(s).trim().toLowerCase().replace(/\/+$/, "");
+/* =========================================
+   2. ELEMENTOS
+========================================= */
+
+const $ = id => document.getElementById(id);
+
+const video = $("video");
+const canvas = $("canvas");
+
+const ctx = canvas.getContext("2d", {
+  willReadFrequently: true
+});
+
+let stream = null;
+let scanning = false;
+let animationId = null;
+let modalOpen = false;
+
+let lastCode = "";
+let lastTime = 0;
+let lastFrameTime = 0;
+
+let currentLink = null;
+let facingMode = "environment";
+
+
+/* =========================================
+   3. NORMALIZAÇÃO DO QR CODE
+========================================= */
+
+function norm(value) {
+
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\/+$/, "");
+
+}
+
+
+function isFatipiUrl(text) {
+
+  try {
+
+    let value = String(text).trim();
+
+    if (!/^https?:\/\//i.test(value)) {
+      value = "https://" + value;
+    }
+
+    const url = new URL(value);
+
+    return (
+      url.hostname === "fatipi.edu.br" ||
+      url.hostname.endsWith(".fatipi.edu.br")
+    );
+
+  } catch (error) {
+
+    return false;
+
+  }
+
+}
+
+
 function findItem(text) {
-  const t = norm(text);
-  return ITEMS.find(i => norm(i.url) === t || norm(i.id) === t) || null;
+
+  const value = norm(text);
+
+  return ITEMS.find(item => {
+
+    return (
+      norm(item.url) === value ||
+      norm(item.id) === value
+    );
+
+  }) || (isFatipiUrl(text) ? ITEMS[0] : null);
+
 }
 
-/* Abre um link em nova aba (funciona dentro do iframe do Apps Script) */
-function abrirLink(url) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+
+/* =========================================
+   4. MENSAGENS E SOBREPOSIÇÃO
+========================================= */
+
+function setStatus(message) {
+
+  $("status").textContent = message;
+
 }
 
-/* ============================================================
-   3) Câmera
-   ============================================================ */
-function setStatus(t) { $("status").textContent = t; }
-function showOverlay(title, msg, btnLabel) {
+
+function showOverlay(title, message, buttonLabel) {
+
   $("overlayTitle").textContent = title;
-  $("overlayMsg").textContent = msg;
-  $("btnStart").textContent = btnLabel || "Ativar câmera";
+
+  $("overlayMsg").textContent = message;
+
+  $("btnStart").textContent =
+    buttonLabel || "Ativar câmera";
+
   $("overlay").classList.add("show");
+
 }
-function hideOverlay() { $("overlay").classList.remove("show"); }
+
+
+function hideOverlay() {
+
+  $("overlay").classList.remove("show");
+
+}
+
+
+/* =========================================
+   5. INICIAR CÂMERA
+========================================= */
 
 async function startCamera() {
+
   if (stream) return;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showOverlay("Câmera indisponível",
-      "Este navegador não permite acesso à câmera aqui. Abra o link do app (terminando em /exec) diretamente no Safari, em HTTPS.",
-      "Tentar de novo");
+
+  if (!navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia) {
+
+    showOverlay(
+      "Câmera indisponível",
+      "Seu navegador não permite acesso à câmera neste endereço. Abra o site diretamente em HTTPS.",
+      "Tentar novamente"
+    );
+
     return;
+
   }
+
+  if (typeof window.jsQR !== "function") {
+
+    showOverlay(
+      "Leitor não carregado",
+      "A biblioteca jsQR não foi carregada. Verifique sua conexão com a internet e atualize a página.",
+      "Tentar novamente"
+    );
+
+    setStatus("Biblioteca indisponível");
+
+    return;
+
+  }
+
   try {
+
+    setStatus("Solicitando acesso à câmera...");
+
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
+
+      audio: false,
+
+      video: {
+
+        facingMode: {
+          ideal: facingMode
+        },
+
+        width: {
+          ideal: 1920
+        },
+
+        height: {
+          ideal: 1080
+        }
+
+      }
+
     });
+
     video.srcObject = stream;
+
     video.setAttribute("playsinline", "true");
+
     await video.play();
+
     hideOverlay();
-    setStatus("Procurando QR code…");
+
     scanning = true;
-    requestAnimationFrame(tick);
-  } catch (err) {
-    stream = null;
-    let msg = "Não foi possível abrir a câmera.";
-    if (err && err.name === "NotAllowedError")
-      msg = "Permissão negada. No iPhone: Ajustes › Safari › Câmera › Permitir (ou toque em “aA” na barra do endereço › Ajustes do site). Se esta página estiver dentro de outra página (iframe), abra o link do app diretamente no Safari.";
-    else if (err && err.name === "NotFoundError")
-      msg = "Nenhuma câmera encontrada neste dispositivo.";
-    showOverlay("Câmera desativada", msg, "Tentar de novo");
+
+    lastFrameTime = 0;
+
+    setStatus("Procurando QR Code...");
+
+    if (animationId !== null) {
+      cancelAnimationFrame(animationId);
+    }
+
+    animationId = requestAnimationFrame(tick);
+
+  } catch (error) {
+
+    console.error("Erro ao iniciar câmera:", error);
+
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+
+    let message =
+      "Não foi possível abrir a câmera. Verifique as permissões do navegador.";
+
+    if (error.name === "NotAllowedError") {
+
+      message =
+        "Permissão negada. Autorize o acesso à câmera nas configurações do navegador.";
+
+    } else if (error.name === "NotFoundError") {
+
+      message =
+        "Nenhuma câmera foi encontrada neste dispositivo.";
+
+    } else if (error.name === "NotReadableError") {
+
+      message =
+        "A câmera está sendo utilizada por outro aplicativo.";
+
+    } else if (error.name === "OverconstrainedError") {
+
+      message =
+        "Não foi possível utilizar a configuração solicitada para a câmera.";
+
+    }
+
+    scanning = false;
+
+    showOverlay(
+      "Câmera desativada",
+      message,
+      "Tentar novamente"
+    );
+
+    setStatus("Câmera indisponível");
+
   }
+
 }
+
+
+/* =========================================
+   6. PARAR CÂMERA
+========================================= */
 
 function stopCamera() {
+
   scanning = false;
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-}
 
-function tick() {
-  if (!scanning) return;
-  if (!modalOpen && video.readyState >= 2 && video.videoWidth) {
-    const scale = Math.min(1, 640 / video.videoWidth);
-    const w = Math.floor(video.videoWidth * scale), h = Math.floor(video.videoHeight * scale);
-    canvas.width = w; canvas.height = h;
-    ctx.drawImage(video, 0, 0, w, h);
-    const img = ctx.getImageData(0, 0, w, h);
-    const code = window.jsQR ? jsQR(img.data, w, h, { inversionAttempts: "dontInvert" }) : null;
-    if (code && code.data) {
-      const now = Date.now();
-      if (code.data !== lastCode || now - lastTime > 3000) {
-        lastCode = code.data; lastTime = now;
-        onScan(code.data);
-      }
-    }
+  if (animationId !== null) {
+
+    cancelAnimationFrame(animationId);
+
+    animationId = null;
+
   }
-  requestAnimationFrame(tick);
+
+  if (stream) {
+
+    stream.getTracks().forEach(track => track.stop());
+
+    stream = null;
+
+  }
+
+  video.srcObject = null;
+
+  setStatus("Câmera parada");
+
 }
 
-/* ============================================================
-   4) Pop-up
-   ============================================================ */
-function openModal({ tag, warn, title, desc, link, qrText }) {
-  $("mTag").textContent = tag;
-  $("mTag").className = "tag" + (warn ? " warn" : "");
-  $("mTitle").textContent = title;
-  $("mDesc").textContent = desc;
-  currentLink = link || null;
-  $("mOpen").style.display = link ? "" : "none";
 
-  const box = $("mQr");
+/* =========================================
+   7. LEITURA DO QR CODE
+========================================= */
+
+function tick(timestamp) {
+
+  if (!scanning) return;
+
+  try {
+
+    if (
+      !modalOpen &&
+      video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+      video.videoWidth > 0 &&
+      timestamp - lastFrameTime >= 100
+    ) {
+
+      lastFrameTime = timestamp;
+
+      /*
+       * Aumenta a resolução de análise.
+       * Isso ajuda na leitura de códigos menores.
+       */
+
+      const scale = Math.min(
+        1,
+        1200 / video.videoWidth
+      );
+
+      const width = Math.max(
+        1,
+        Math.floor(video.videoWidth * scale)
+      );
+
+      const height = Math.max(
+        1,
+        Math.floor(video.videoHeight * scale)
+      );
+
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.drawImage(
+        video,
+        0,
+        0,
+        width,
+        height
+      );
+
+      const image = ctx.getImageData(
+        0,
+        0,
+        width,
+        height
+      );
+
+      /*
+       * LEITOR PRINCIPAL
+       */
+
+      const code = window.jsQR(
+        image.data,
+        width,
+        height,
+        {
+          inversionAttempts: "attemptBoth"
+        }
+      );
+
+      if (code && code.data) {
+
+        const now = Date.now();
+
+        if (
+          code.data !== lastCode ||
+          now - lastTime > 3000
+        ) {
+
+          lastCode = code.data;
+
+          lastTime = now;
+
+          console.log("QR Code identificado:", code.data);
+
+          onScan(code.data);
+
+        }
+
+      }
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Erro durante leitura do QR Code:",
+      error
+    );
+
+    setStatus("Erro ao analisar imagem.");
+
+  }
+
+  if (scanning) {
+
+    animationId = requestAnimationFrame(tick);
+
+  }
+
+}
+
+
+/* =========================================
+   8. TROCAR CÂMERA
+========================================= */
+
+async function switchCamera() {
+
+  const wasRunning = Boolean(stream);
+
+  facingMode =
+    facingMode === "environment"
+      ? "user"
+      : "environment";
+
+  if (wasRunning) {
+
+    stopCamera();
+
+    await startCamera();
+
+  } else {
+
+    setStatus(
+      facingMode === "environment"
+        ? "Câmera traseira selecionada"
+        : "Câmera frontal selecionada"
+    );
+
+  }
+
+}
+
+
+/* =========================================
+   9. GERAR QR CODE
+========================================= */
+
+function generateQRCode(text, box) {
+
   box.innerHTML = "";
-  if (qrText && window.QRCode) {
-    new QRCode(box, { text: qrText, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
-    box.style.display = "flex";
-  } else box.style.display = "none";
+
+  if (typeof window.QRCode !== "function") {
+
+    box.style.display = "none";
+
+    return;
+
+  }
+
+  new QRCode(box, {
+
+    text: text,
+
+    width: 200,
+
+    height: 200,
+
+    correctLevel: QRCode.CorrectLevel.M
+
+  });
+
+  box.style.display = "flex";
+
+}
+
+
+/* =========================================
+   10. JANELA DE RESULTADO
+========================================= */
+
+function openModal({
+  tag,
+  warn,
+  title,
+  desc,
+  link,
+  qrText
+}) {
+
+  $("mTag").textContent = tag;
+
+  $("mTag").className =
+    "tag" + (warn ? " warn" : "");
+
+  $("mTitle").textContent = title;
+
+  $("mDesc").textContent = desc;
+
+  currentLink = link || null;
+
+  $("mOpen").style.display =
+    link ? "" : "none";
+
+  $("mQr").innerHTML = "";
+
+  if (qrText) {
+
+    generateQRCode(qrText, $("mQr"));
+
+  } else {
+
+    $("mQr").style.display = "none";
+
+  }
 
   $("modalBg").classList.add("show");
+
   modalOpen = true;
-  if (navigator.vibrate) navigator.vibrate(60);
+
+  if (navigator.vibrate) {
+    navigator.vibrate(60);
+  }
+
 }
+
+
 function closeModal() {
+
   $("modalBg").classList.remove("show");
+
   modalOpen = false;
-  lastTime = Date.now(); // evita reabrir imediatamente o mesmo QR
+
+  lastTime = Date.now();
+
+  setStatus("Procurando QR Code...");
+
 }
+
+
+/* =========================================
+   11. RESULTADO DA LEITURA
+========================================= */
 
 function onScan(text) {
+
   const item = findItem(text);
+
   if (item) {
-    openModal({ tag: "Item encontrado", title: item.titulo, desc: item.descricao, link: item.url });
-  } else {
-    const isUrl = /^https?:\/\//i.test(text);
+
     openModal({
-      tag: "QR não cadastrado", warn: true,
-      title: "Código não reconhecido",
-      desc: "Este QR code não está na lista de itens. Conteúdo lido: " + text,
-      link: isUrl ? text : null
+
+      tag: "Site reconhecido",
+
+      title: item.titulo,
+
+      desc: item.descricao,
+
+      link: item.url
+
     });
+
+  } else {
+
+    const isUrl = /^https?:\/\//i.test(text);
+
+    openModal({
+
+      tag: "QR Code não cadastrado",
+
+      warn: true,
+
+      title: "Código não reconhecido",
+
+      desc:
+        "A leitura funcionou, mas este QR Code não corresponde ao cadastro da FATIPI. Conteúdo lido: " + text,
+
+      link: isUrl ? text : null
+
+    });
+
   }
+
 }
 
-$("mClose").onclick = closeModal;
-$("modalBg").addEventListener("click", (e) => { if (e.target.id === "modalBg") closeModal(); });
-$("mOpen").onclick = () => { if (currentLink) abrirLink(currentLink); };
-$("btnStart").onclick = startCamera;
 
-/* ============================================================
-   5) Lista de itens (com botão para ver o QR e testar)
-   ============================================================ */
+/* =========================================
+   12. ABRIR LINK
+========================================= */
+
+function abrirLink(url) {
+
+  if (!url) return;
+
+  window.open(
+    url,
+    "_blank",
+    "noopener,noreferrer"
+  );
+
+}
+
+
+/* =========================================
+   13. BOTÕES
+========================================= */
+
+$("mClose").addEventListener(
+  "click",
+  closeModal
+);
+
+$("modalBg").addEventListener(
+  "click",
+  event => {
+
+    if (event.target.id === "modalBg") {
+      closeModal();
+    }
+
+  }
+);
+
+$("mOpen").addEventListener(
+  "click",
+  () => {
+
+    if (currentLink) {
+      abrirLink(currentLink);
+    }
+
+  }
+);
+
+$("btnStart").addEventListener(
+  "click",
+  startCamera
+);
+
+$("btnSwitch").addEventListener(
+  "click",
+  switchCamera
+);
+
+$("btnStop").addEventListener(
+  "click",
+  stopCamera
+);
+
+
+/* =========================================
+   14. LISTA DE QR CODES
+========================================= */
+
 const list = $("list");
+
 ITEMS.forEach(item => {
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = '<div><b></b><span></span></div><button class="ghost small">Ver QR</button>';
-  el.querySelector("b").textContent = item.titulo;
-  el.querySelector("span").textContent = item.url;
-  el.querySelector("button").onclick = () => {
-    openModal({ tag: "QR do item", title: item.titulo, desc: item.descricao, link: item.url, qrText: item.url });
-  };
-  list.appendChild(el);
+
+  const element = document.createElement("div");
+
+  element.className = "item";
+
+  const info = document.createElement("div");
+
+  const title = document.createElement("b");
+
+  const url = document.createElement("span");
+
+  const button = document.createElement("button");
+
+  title.textContent = item.titulo;
+
+  url.textContent = item.url;
+
+  button.type = "button";
+
+  button.className = "ghost small";
+
+  button.textContent = "Ver QR";
+
+  button.addEventListener("click", () => {
+
+    openModal({
+
+      tag: "QR Code oficial",
+
+      title: item.titulo,
+
+      desc: item.descricao,
+
+      link: item.url,
+
+      qrText: item.url
+
+    });
+
+  });
+
+  info.appendChild(title);
+
+  info.appendChild(url);
+
+  element.appendChild(info);
+
+  element.appendChild(button);
+
+  list.appendChild(element);
+
 });
 
-/* ============================================================
-   6) Início automático
-   ============================================================ */
-window.addEventListener("load", startCamera);
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) stopCamera(); else startCamera();
-});
-window.addEventListener("pagehide", stopCamera);
 
-// Se o navegador bloquear o início automático, mostra botão
-setTimeout(() => { if (!stream) showOverlay("Ativar câmera", "Toque no botão e permita o acesso à câmera.", "Ativar câmera"); }, 1500);
+/* =========================================
+   15. INICIALIZAÇÃO
+========================================= */
+
+window.addEventListener("load", () => {
+
+  console.log(
+    "Biblioteca jsQR:",
+    typeof window.jsQR
+  );
+
+  if (typeof window.jsQR !== "function") {
+
+    showOverlay(
+      "Leitor não carregado",
+      "A biblioteca jsQR não foi carregada. Verifique a conexão com a internet.",
+      "Tentar novamente"
+    );
+
+    setStatus("Biblioteca indisponível");
+
+  } else {
+
+    startCamera();
+
+  }
+
+});
+
+
+/* =========================================
+   16. CICLO DE VIDA
+========================================= */
+
+document.addEventListener(
+  "visibilitychange",
+  () => {
+
+    if (document.hidden) {
+
+      stopCamera();
+
+    } else if (!stream) {
+
+      startCamera();
+
+    }
+
+  }
+);
+
+window.addEventListener(
+  "pagehide",
+  stopCamera
+);
+
 </script>
+
 </body>
 </html>
